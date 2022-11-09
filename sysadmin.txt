@@ -1,0 +1,32 @@
+*add user to a group
+usermode -aG <group, group, ....> <username>
+-s to specify the shell for the user
+-s /sbin/nologing prevent the user from login in
+gpasswd -a <user> <group>
+
+
+*delete user from group
+gpasswd -d <user> <group>
+*change user home directory
+usermode -d <new path exmple /home/myhome> <username>
+(you can add --move-home  to copy the content from the old directory to the new one)
+
+*change user username
+usermode -l <username> <new-username>
+
+*lock user from loging to the system
+usermode -L <username>
+passwd -l <username>
+
+*unlock user from loging to system
+usermode -U <username>
+passwd -u <username>
+
+#create user
+adduser <username> <groups>
+-m to create home dir for the user
+
+*delete user
+userdel <username>
+-r delete user home dir
+https://www.youtube.com/watch?v=m2d_cm47Hwc

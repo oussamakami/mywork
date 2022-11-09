@@ -1,0 +1,81 @@
+su -
+apt install ufw sudo vim openssh-server libpam-pwquality
+groupadd user42
+gpasswd -a okamili user42
+vim /etc/hostname => okamili42
+vim /etc/host => 127.0.1.1 okamili42
+
+
+vim /etc/ssh/sshd_config
+	port 4242
+	permitrootlogin no
+vim /etc/login_defs
+	PASS_MAX_DAYS 30
+	PASS_MIN_DAYS 2
+	PASS_WARN_AGE 7
+ufw allow 4242
+visudo
+	Defaults	secure_Path="......"
+	Defaults	badpass_message="wrong password!"
+	Defaults	logfile="/var/log/sudo/sudo.log"
+	defaults	iolog_dir="/car/log/sudo"
+	defaults	log_input, log_output
+	defaults	passwd_tries=3
+	defaults	requiretty
+
+vim /etc/pam.d/common
+	minlen=10
+	ucredit=-1
+	lcredit=-1
+	dcredit=-1
+	maxrepeat=3
+	difok=7
+	usercheck=1
+	enforce_for_root	
+
+touch monitoring.sh
+
+#!/bin/bash
+
+
+systemversion=$(uname -a)
+
+physicalCPU=$(lscpu | grep Socket | awk '{print $2}')
+virtualCPU=$(lscpu | grep "^CPU(s)" | awk '{print $2}')
+
+ramInfo=$(free --mega | grep Mem | awk '{total=$2; used=$3; printf("%d/%dMB (%.2f%%)"),     used, total, ((used * 100)/total)}')
+
+disktotal=$(df -BG | grep "^/dev" | grep -v "/boot" | awk 'total += $2; END {printf("%dGB"), total}' | tail -n 1)
+diskUsed=$(df -BMB | grep "^/dev" | grep -v "/boot" | awk 'used += $3; END {printf("%dMB"), used}' | tail -n 1)
+diskUsageInfo=$(df -BMB | grep "^/dev" | grep -v "/boot" | awk 'total += $2; used += $3; END {printf("(%.2f%%)"), ((used * 100)/total)}' | tail -n 1)
+
+#cpu load
+
+lastBoot=$(uptime -s | awk -F: '{print $1":"$2}')
+
+LVMUse=$(vgdisplay -v | grep available | wc -l | awk '{if($1 > 0) print "YES"; else print "NO"}')
+
+tcpConnections=$(cat /proc/net/tcp | awk 'FNR!=1 {print}' | wc -l)
+
+loggedInUsers=$(who | awk '{print $1}' | sort | uniq | wc -l)
+
+hostIP=$(hostname -I)
+hostMac=$(ip a | grep "state UP" -A1 | awk 'FNR==2 {print $2}')
+
+sudocommands=$(cat /var/log/sudo/sudo.log | grep COMMAND | wc -l)
+
+wall -n "
+#Architecture	 : $systemversion
+#CPU(s)		 : $physicalCPU
+#vCPU(s)	 : $virtualCPU
+#Memory Usage	 : $ramInfo
+#Disk Usage	 : $diskUsed/$disktotal $diskUsageInfo
+#CPU Load	 : NA
+#Last Boot	 : $lastBoot
+#LVM Use	 : $LVMUse
+#TCP Connections : $tcpConnections
+#Logged In Users : $loggedInUsers
+#Network	 : IP $hostIP ($hostMac)
+#Sudo Executions : $sudocommands
+"
+
